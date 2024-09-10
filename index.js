@@ -28,6 +28,9 @@ async function run() {
   try {
     // collections
     const blogsCollection = client.db("donorhive").collection("blogs");
+    const donationRequstsCollection = client
+      .db("donorhive")
+      .collection("donation-requests");
     // all apis
 
     // Blog
@@ -35,12 +38,13 @@ async function run() {
       const result = await blogsCollection.find().toArray();
       res.send(result);
     });
-
+    // Post Blog
     app.post("/blog", async (req, res) => {
       const blogInfo = req.body;
       const result = await blogsCollection.insertOne(blogInfo);
       res.send(result);
     });
+    // Get Single Blog
     app.get("/blog/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -48,6 +52,7 @@ async function run() {
       res.send(result);
     });
 
+    // Update status of single blog
     app.patch("/blog/:id", async (req, res) => {
       const id = req.params.id;
       const status = req.body;
@@ -59,10 +64,19 @@ async function run() {
       res.send(result);
     });
 
+    // Delete blog
     app.delete("/blog/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await blogsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.post("/donation-request", async (req, res) => {
+      const donationRequestInfo = req.body;
+      const result = await donationRequstsCollection.insertOne(
+        donationRequestInfo
+      );
       res.send(result);
     });
 
