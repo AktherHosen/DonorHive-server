@@ -72,6 +72,20 @@ async function run() {
       res.send(result);
     });
 
+    // get all donation request
+    app.get("/donation-requests", async (req, res) => {
+      const result = await donationRequstsCollection.find().toArray();
+      res.send(result);
+    });
+
+    // get specific user donation request
+    app.get("/donation-requests/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { requesterEmail: email };
+      const result = await donationRequstsCollection.find(query).toArray();
+      res.send(result);
+    });
+    // create donation request
     app.post("/donation-request", async (req, res) => {
       const donationRequestInfo = req.body;
       const result = await donationRequstsCollection.insertOne(
