@@ -78,7 +78,7 @@ async function run() {
       res.send(result);
     });
 
-    // get specific user donation request
+    // get specific user donation request by email
     app.get("/donation-requests/:email", async (req, res) => {
       const email = req.params.email;
       const query = { requesterEmail: email };
@@ -91,6 +91,20 @@ async function run() {
       const result = await donationRequstsCollection.insertOne(
         donationRequestInfo
       );
+      res.send(result);
+    });
+
+    app.get("/donation-request/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await donationRequstsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.delete("/donation-request/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await donationRequstsCollection.deleteOne(query);
       res.send(result);
     });
 
