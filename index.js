@@ -101,13 +101,24 @@ async function run() {
       res.send(result);
     });
 
-    // get specific user donation request by email
     app.get("/donation-requests/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { requesterEmail: email };
-      const result = await donationRequstsCollection.find(query).toArray();
-      res.send(result);
+      const filter = req.query.filter || "";
+      let query = { requesterEmail: email };
+      if (filter && filter !== "") {
+        query.status = filter;
+      }
+      try {
+        const result = await donationRequstsCollection.find(query).toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({
+          message: "Error retrieving donation requests",
+          error: err.message,
+        });
+      }
     });
+
     // create donation request
     app.post("/donation-request", async (req, res) => {
       const donationRequestInfo = req.body;
