@@ -35,7 +35,12 @@ async function run() {
 
     // Blog
     app.get("/blogs", async (req, res) => {
-      const result = await blogsCollection.find().toArray();
+      const filter = req.query.filter || "";
+      let query = {};
+      if (filter && filter !== "") {
+        query.status = filter;
+      }
+      const result = await blogsCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -139,7 +144,7 @@ async function run() {
     // donation request update data
     app.put("/donation-request/:id", async (req, res) => {
       const id = req.params.id;
-      const { requesterEmail, status, ...donationInfo } = req.body; // Exclude status field
+      const { requesterEmail, status, ...donationInfo } = req.body;
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateDoc = {
