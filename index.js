@@ -101,6 +101,7 @@ async function run() {
       res.send(result);
     });
 
+    // get specific user donation request and filter by status
     app.get("/donation-requests/:email", async (req, res) => {
       const email = req.params.email;
       const filter = req.query.filter || "";
@@ -138,18 +139,26 @@ async function run() {
     // donation request update data
     app.put("/donation-request/:id", async (req, res) => {
       const id = req.params.id;
-      const donationInfo = req.body;
+      const { requesterEmail, status, ...donationInfo } = req.body; // Exclude status field
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
       const updateDoc = {
         $set: { ...donationInfo },
       };
-      const result = await donationRequstsCollection.updateOne(
-        query,
-        updateDoc,
-        options
-      );
-      res.send(result);
+
+      try {
+        const result = await donationRequstsCollection.updateOne(
+          query,
+          updateDoc,
+          options
+        );
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({
+          message: "Error updating donation request",
+          error: err.message,
+        });
+      }
     });
 
     app.delete("/donation-request/:id", async (req, res) => {
