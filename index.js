@@ -90,6 +90,16 @@ async function run() {
       const result = await donationRequstsCollection.find().toArray();
       res.send(result);
     });
+    app.get("/blood-donation-requests", async (req, res) => {
+      const status = req.query.status;
+      let query = {};
+      if (status === "pending") {
+        query = { status: "pending" };
+      }
+
+      const result = await donationRequstsCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // get specific user donation request by email
     app.get("/donation-requests/:email", async (req, res) => {
