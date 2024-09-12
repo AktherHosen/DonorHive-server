@@ -119,9 +119,24 @@ async function run() {
     });
 
     app.delete("/donation-request/:id", async (req, res) => {
-      const id = req.params.id;
+      const id = req.params;
       const query = { _id: new ObjectId(id) };
       const result = await donationRequstsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // Update status of single blog
+    app.patch("/donation-request/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: status,
+      };
+      const result = await donationRequstsCollection.updateOne(
+        query,
+        updateDoc
+      );
       res.send(result);
     });
 
