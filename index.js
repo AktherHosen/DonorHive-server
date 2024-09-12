@@ -174,18 +174,43 @@ async function run() {
     });
 
     // Update status of single blog
+    // app.patch("/donation-request/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const status = req.body;
+    //   const query = { _id: new ObjectId(id) };
+    //   const updateDoc = {
+    //     $set: status,
+    //   };
+    //   const result = await donationRequstsCollection.updateOne(
+    //     query,
+    //     updateDoc
+    //   );
+    //   res.send(result);
+    // });
     app.patch("/donation-request/:id", async (req, res) => {
       const id = req.params.id;
-      const status = req.body;
+      const { status, donorName, donorEmail } = req.body;
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
-        $set: status,
+        $set: {
+          status: status,
+          donorName: donorName,
+          donorEmail: donorEmail,
+        },
       };
-      const result = await donationRequstsCollection.updateOne(
-        query,
-        updateDoc
-      );
-      res.send(result);
+
+      try {
+        const result = await donationRequstsCollection.updateOne(
+          query,
+          updateDoc
+        );
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({
+          message: "Error updating donation request",
+          error: err.message,
+        });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
