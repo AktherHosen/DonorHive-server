@@ -38,6 +38,19 @@ async function run() {
       const result = await blogsCollection.find().toArray();
       res.send(result);
     });
+
+    // only published blog will fetched blog page
+    app.get("/all-blogs", async (req, res) => {
+      const status = req.query.status;
+      let query = {};
+      if (status === "published") {
+        query = { status: "published" };
+      }
+
+      const result = await blogsCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // Post Blog
     app.post("/blog", async (req, res) => {
       const blogInfo = req.body;
