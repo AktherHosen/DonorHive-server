@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -32,6 +33,32 @@ async function run() {
     const donationRequstsCollection = client
       .db("donorhive")
       .collection("donation-requests");
+
+    //jwt api
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "365d",
+      });
+      res.send({ token });
+    });
+
+    //verifyToken
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "forbidden access." });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          return res.status(401).send({ message: "forbidden access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
+
     // all apis
 
     // make admin
@@ -45,6 +72,36 @@ async function run() {
       const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
     });
+
+    app.get("/user/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      // Check if the requesting user is trying to access their own data
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Unauthorized access" });
+      }
+
+      try {
+        // Query to find the user by email
+        const query = { email: email };
+        const user = await usersCollection.findOne(query);
+
+        if (user) {
+          // Check the user's role and set it accordingly
+          const role = user?.role || "donor"; // Default to 'donor' if no role is specified
+
+          // Send back the user's role
+          res.send({ role });
+        } else {
+          // If no user is found, return a 404 error
+          res.status(404).send({ message: "User not found" });
+        }
+      } catch (err) {
+        // Handle any potential errors during database operations
+        res.status(500).send({ message: "Server error", error: err.message });
+      }
+    });
+
     // users api
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -58,7 +115,7 @@ async function run() {
       res.send(result);
     });
     // get all user
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken, async (req, res) => {
       const filter = req.query.filter || "";
       let query = {};
       if (filter && filter !== "") {
