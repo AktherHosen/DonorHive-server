@@ -34,6 +34,17 @@ async function run() {
       .collection("donation-requests");
     // all apis
 
+    // make admin
+    app.patch("/user/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const role = req.body;
+      const updateDoc = {
+        $set: role,
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
     // users api
     app.post("/users", async (req, res) => {
       const user = req.body;
