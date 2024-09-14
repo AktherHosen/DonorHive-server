@@ -62,6 +62,7 @@ async function run() {
     // all apis
 
     // make admin
+    // PATCH route to update user role
     app.patch("/user/admin/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -76,22 +77,16 @@ async function run() {
     app.get("/user/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
 
-      // Check if the requesting user is trying to access their own data
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: "Unauthorized access" });
       }
-
       try {
-        // Query to find the user by email
         const query = { email: email };
         const user = await usersCollection.findOne(query);
-
+        console.log(user);
+        // If user is found, return their role
         if (user) {
-          // Check the user's role and set it accordingly
-          const role = user?.role || "donor"; // Default to 'donor' if no role is specified
-
-          // Send back the user's role
-          res.send({ role });
+          res.send({ role: user.role });
         } else {
           // If no user is found, return a 404 error
           res.status(404).send({ message: "User not found" });
