@@ -56,6 +56,22 @@ async function run() {
       const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
+
+    //search donor
+    app.get("/donors", async (req, res) => {
+      const bloodGroup = req.query.bloodGroup || "";
+      const district = req.query.district || "";
+      const upozila = req.query.upozila || "";
+      const query = {};
+
+      if (bloodGroup && bloodGroup !== "") query.bloodGroup = bloodGroup;
+      if (district && district !== "") query.district = district;
+      if (upozila && query !== "") query.upozila = upozila;
+
+      const donors = await usersCollection.find(query).toArray();
+      res.send(donors);
+    });
+
     app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
