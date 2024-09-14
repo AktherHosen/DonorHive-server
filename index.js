@@ -48,7 +48,12 @@ async function run() {
     });
     // get all user
     app.get("/users", async (req, res) => {
-      const result = await usersCollection.find().toArray();
+      const filter = req.query.filter || "";
+      let query = {};
+      if (filter && filter !== "") {
+        query.status = filter;
+      }
+      const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
     app.get("/user/:email", async (req, res) => {
@@ -179,11 +184,24 @@ async function run() {
 
     // create donation request
     app.post("/donation-request", async (req, res) => {
-      const donationRequestInfo = req.body;
-      const result = await donationRequstsCollection.insertOne(
-        donationRequestInfo
-      );
-      res.send(result);
+      const email = req.query.email;
+
+      try {
+        const user = await usersCollection.findOne({ email: email });
+        if (user.status !== "active") {
+          return res.status(403).send({
+            message: "Sorry, you are blocked. You can't make a request.",
+          });
+        }
+        const donationRequestInfo = req.body;
+        const result = await donationRequstsCollection.insertOne(
+          donationRequestInfo
+        );
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Internal Server Error" });
+      }
     });
 
     app.get("/donation-request/:id", async (req, res) => {
