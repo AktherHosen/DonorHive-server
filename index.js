@@ -27,11 +27,63 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // collections
+    const usersCollection = client.db("donorhive").collection("users");
     const blogsCollection = client.db("donorhive").collection("blogs");
     const donationRequstsCollection = client
       .db("donorhive")
       .collection("donation-requests");
     // all apis
+
+    // users api
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      // check if user exist
+      const query = { email: user.email };
+      const existingUser = await usersCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: "user already exists", insertedId: null });
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+    // get all user
+    app.get("/users", async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.put("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const userInfo = req.body;
+      const options = {
+        upsert: true,
+      };
+      const updateDoc = {
+        $set: {
+          ...userInfo,
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    });
+
+    app.patch("/user/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: status,
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     // Blog
     app.get("/blogs", async (req, res) => {
