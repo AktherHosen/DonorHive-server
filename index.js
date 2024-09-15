@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const corsOptions = {
   origin: ["http://localhost:5173"],
@@ -30,6 +31,7 @@ async function run() {
     // collections
     const usersCollection = client.db("donorhive").collection("users");
     const blogsCollection = client.db("donorhive").collection("blogs");
+    const paymentsCollection = client.db("donorhive").collection("payments");
     const donationRequstsCollection = client
       .db("donorhive")
       .collection("donation-requests");
@@ -46,18 +48,64 @@ async function run() {
     //verifyToken
     const verifyToken = (req, res, next) => {
       if (!req.headers.authorization) {
-        return res.status(401).send({ message: "forbidden access." });
+        return res.status(401).send({ message: "unauthorized access." });
       }
       const token = req.headers.authorization.split(" ")[1];
 
       jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: "forbidden access" });
+          return res.status(401).send({ message: "unauthorized access" });
         }
         req.decoded = decoded;
         next();
       });
     };
+
+    // use verify admin  after verifytoken
+    // Middleware to verify if the user is either an admin or a volunteer
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+
+      const isAdmin = user?.role === "admin";
+      const isVolunteer = user?.role === "volunteer";
+
+      // Block access if the user is neither admin nor volunteer
+      if (!isAdmin && !isVolunteer) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      // If the user is an admin or volunteer, proceed to the next middleware
+      next();
+    };
+
+    //stripe payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+
+    // payment related api
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      res.send(result);
+    });
+
+    app.get("/payments", async (req, res) => {
+      const result = await paymentsCollection.find().toArray();
+      res.send(result);
+    });
 
     // all apis
 
@@ -78,12 +126,12 @@ async function run() {
       const email = req.params.email;
 
       if (email !== req.decoded.email) {
-        return res.status(403).send({ message: "Unauthorized access" });
+        return res.status(403).send({ message: "Forbidden access" });
       }
       try {
         const query = { email: email };
         const user = await usersCollection.findOne(query);
-        console.log(user);
+
         // If user is found, return their role
         if (user) {
           res.send({ role: user.role });
@@ -110,7 +158,7 @@ async function run() {
       res.send(result);
     });
     // get all user
-    app.get("/users", verifyToken, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const filter = req.query.filter || "";
       let query = {};
       if (filter && filter !== "") {
@@ -170,16 +218,48 @@ async function run() {
     });
 
     //statistics
+    // app.get("/statistics", async (req, res) => {
+    //   try {
+    //     const totalDonors = await usersCollection.countDocuments({
+    //       role: "donor",
+    //     });
+    //     const totalBloodRequests =
+    //       await donationRequstsCollection.estimatedDocumentCount();
+    //     res.send({
+    //       totalDonors,
+    //       totalBloodRequests,
+    //     });
+    //   } catch (error) {
+    //     res.status(500).send({ error: "Failed to fetch statistics" });
+    //   }
+    // });
     app.get("/statistics", async (req, res) => {
       try {
+        // Count total donors
         const totalDonors = await usersCollection.countDocuments({
           role: "donor",
         });
+
+        // Count total blood requests
         const totalBloodRequests =
           await donationRequstsCollection.estimatedDocumentCount();
+
+        // Sum the total funding amount
+        const totalFunding = await paymentsCollection
+          .aggregate([
+            {
+              $group: {
+                _id: null,
+                totalAmount: { $sum: { $toDouble: "$price" } }, // Ensure price is treated as a number
+              },
+            },
+          ])
+          .toArray();
+
         res.send({
           totalDonors,
           totalBloodRequests,
+          totalFunding: totalFunding[0]?.totalAmount || 0, // Handle case where no payments exist
         });
       } catch (error) {
         res.status(500).send({ error: "Failed to fetch statistics" });
