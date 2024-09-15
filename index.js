@@ -169,6 +169,23 @@ async function run() {
       res.send(result);
     });
 
+    //statistics
+    app.get("/statistics", async (req, res) => {
+      try {
+        const totalDonors = await usersCollection.countDocuments({
+          role: "donor",
+        });
+        const totalBloodRequests =
+          await donationRequstsCollection.estimatedDocumentCount();
+        res.send({
+          totalDonors,
+          totalBloodRequests,
+        });
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch statistics" });
+      }
+    });
+
     // Blog
     app.get("/blogs", async (req, res) => {
       const filter = req.query.filter || "";
