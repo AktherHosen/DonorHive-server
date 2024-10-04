@@ -7,7 +7,7 @@ const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const corsOptions = {
-  origin: ["http://localhost:5173"],
+  origin: ["http://localhost:5173", "https://donor-hive.web.app"],
   credentials: true,
   operationSuccessStatus: 200,
 };
@@ -62,7 +62,6 @@ async function run() {
     };
 
     // use verify admin  after verifytoken
-    // Middleware to verify if the user is either an admin or a volunteer
     const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
       const query = { email: email };
@@ -131,16 +130,12 @@ async function run() {
       try {
         const query = { email: email };
         const user = await usersCollection.findOne(query);
-
-        // If user is found, return their role
         if (user) {
           res.send({ role: user.role });
         } else {
-          // If no user is found, return a 404 error
           res.status(404).send({ message: "User not found" });
         }
       } catch (err) {
-        // Handle any potential errors during database operations
         res.status(500).send({ message: "Server error", error: err.message });
       }
     });
@@ -217,22 +212,6 @@ async function run() {
       res.send(result);
     });
 
-    //statistics
-    // app.get("/statistics", async (req, res) => {
-    //   try {
-    //     const totalDonors = await usersCollection.countDocuments({
-    //       role: "donor",
-    //     });
-    //     const totalBloodRequests =
-    //       await donationRequstsCollection.estimatedDocumentCount();
-    //     res.send({
-    //       totalDonors,
-    //       totalBloodRequests,
-    //     });
-    //   } catch (error) {
-    //     res.status(500).send({ error: "Failed to fetch statistics" });
-    //   }
-    // });
     app.get("/statistics", async (req, res) => {
       try {
         // Count total donors
@@ -250,7 +229,7 @@ async function run() {
             {
               $group: {
                 _id: null,
-                totalAmount: { $sum: { $toDouble: "$price" } }, // Ensure price is treated as a number
+                totalAmount: { $sum: { $toDouble: "$price" } },
               },
             },
           ])
@@ -259,7 +238,7 @@ async function run() {
         res.send({
           totalDonors,
           totalBloodRequests,
-          totalFunding: totalFunding[0]?.totalAmount || 0, // Handle case where no payments exist
+          totalFunding: totalFunding[0]?.totalAmount || 0,
         });
       } catch (error) {
         res.status(500).send({ error: "Failed to fetch statistics" });
@@ -419,20 +398,6 @@ async function run() {
       res.send(result);
     });
 
-    // Update status of single blog
-    // app.patch("/donation-request/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const status = req.body;
-    //   const query = { _id: new ObjectId(id) };
-    //   const updateDoc = {
-    //     $set: status,
-    //   };
-    //   const result = await donationRequstsCollection.updateOne(
-    //     query,
-    //     updateDoc
-    //   );
-    //   res.send(result);
-    // });
     app.patch("/donation-request/:id", async (req, res) => {
       const id = req.params.id;
       const { status, donorName, donorEmail } = req.body;
@@ -459,7 +424,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
